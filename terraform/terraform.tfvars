@@ -4,7 +4,7 @@
 #       Add terraform.tfvars to .gitignore in production.
 # ─────────────────────────────────────────────────────────────────
 
-project_id   = "YOUR_GCP_PROJECT_ID"
+project_id   = "brilliant-tide-453616-r9"
 region       = "us-central1"
 zone         = "us-central1-a"
 cluster_name = "ecommerce-cluster"
