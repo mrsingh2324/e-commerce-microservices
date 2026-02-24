@@ -67,8 +67,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SERVER_PORT=8080
-      - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://product-service:8081
-      - SPRING_CLOUD_GATEWAY_ROUTES_1_URI=http://order-service:8082
     depends_on:
       product-service:
         condition: service_healthy
