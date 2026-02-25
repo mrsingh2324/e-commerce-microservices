@@ -1,0 +1,69 @@
+name: CI/CD — Build & Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: cicdcollab
+  GAR_LOCATION: us-central1
+  GAR_REPO: ecommerce-repo
+  GKE_CLUSTER: ecommerce-cluster
+  GKE_ZONE: us-central1-a
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    strategy:
+      matrix:
+        service: [product-service, order-service, api-gateway]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 🔐 Authenticate to Google Cloud
+      - name: Authenticate
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # ☁ Setup gcloud
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 🔑 Configure Docker
+      - name: Configure Docker
+        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev --quiet
+
+      # 🔥 Build & Push Image
+      - name: Build & Push
+        run: |
+          IMAGE_URI="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/${{ matrix.service }}:$GITHUB_SHA"
+
+          docker build -t $IMAGE_URI ./${{ matrix.service }}
+          docker push $IMAGE_URI
+
+      # 🔑 Get GKE Credentials
+      - name: Get GKE Credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      # 🚀 Deploy to GKE
+      - name: Deploy to Kubernetes
+        run: |
+          IMAGE_URI="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/${{ matrix.service }}:$GITHUB_SHA"
+
+          kubectl set image deployment/${{ matrix.service }} \
+            ${{ matrix.service }}=$IMAGE_URI \
+            -n ecommerce
+
+          kubectl rollout status deployment/${{ matrix.service }} -n ecommerce
